@@ -1,4 +1,4 @@
-import multiStepMethodImpl.impl.MilnaMethod
+import multiStepMethod.impl.MilnaMethod
 import oneStepMethod.impl.EulerMethod
 import oneStepMethod.impl.RungeKuttaMethod
 import org.jetbrains.letsPlot.geom.geomArea

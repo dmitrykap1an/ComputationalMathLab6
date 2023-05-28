@@ -1,6 +1,6 @@
-package multiStepMethodImpl.impl
+package multiStepMethod.impl
 
-import multiStepMethodImpl.MultistepMethod
+import multiStepMethod.MultistepMethod
 import oneStepMethod.impl.RungeKuttaMethod
 import kotlin.math.abs
 

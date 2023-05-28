@@ -1,4 +1,4 @@
-package multiStepMethodImpl
+package multiStepMethod
 
 interface MultistepMethod {
 
