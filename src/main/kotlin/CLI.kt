@@ -1,8 +1,11 @@
 import multiStepMethod.impl.MilnaMethod
 import oneStepMethod.impl.EulerMethod
 import oneStepMethod.impl.RungeKuttaMethod
-import org.jetbrains.letsPlot.geom.geomArea
+import org.jetbrains.letsPlot.LetsPlot
+import org.jetbrains.letsPlot.geom.geomLine
 import org.jetbrains.letsPlot.letsPlot
+import org.jetbrains.letsPlot.themes.themeGrey
+import utils.Result
 import java.io.*
 import java.time.LocalDateTime
 import kotlin.math.*
@@ -11,26 +14,26 @@ object CLI {
 
     private lateinit var input: () -> String
     private lateinit var bw: BufferedWriter
-    private val br = BufferedReader(FileReader("src/files/tasks/task2.txt"))
+    private val br = BufferedReader(FileReader("src/files/tasks/task3.txt"))
     private var visible = true
     private var equations = mapOf(
         1 to DiffEquation(
             { x: Double, y: Double -> y + (1 + x) * y * y },
-            { x: Double, C: Double ->  - (exp(x)/(x * exp(x) + C))},
-            {x: Double, y: Double -> y + exp(x)/(x * exp(x))},
+            { x: Double, C: Double -> -(exp(x) / (x * exp(x) + C)) },
+            { x: Double, y: Double -> y + exp(x) / (x * exp(x)) },
             "y' = y + (1 + x) * y^2"
         ),
         2 to DiffEquation(
             { x: Double, y: Double -> -(2 * y + 1) * cos(x) },
-            { x: Double, C: Double ->  C/ exp(2 * sin(x)) - 0.5},
-            {x: Double, y: Double -> (y + 0.5) * exp(2 * sin(x))},
+            { x: Double, C: Double -> C / exp(2 * sin(x)) - 0.5 },
+            { x: Double, y: Double -> (y + 0.5) * exp(2 * sin(x)) },
             "y' = -(2y + 1) * cos(x)"
         ),
         3 to DiffEquation(
-            { x: Double, y: Double ->  3 * x * x * y },
-            { x: Double, C: Double -> C * exp(x.pow(3.0)) },
-            {x: Double, y: Double -> y/exp(x.pow(3.0))},
-            "y' = 3x^2 * y"
+            { x: Double, y: Double -> x.pow(5)},
+            { x: Double, C: Double -> x.pow(6)/6 + C},
+            { x: Double, y: Double -> (y * 6 -  x.pow(6))/6},
+            "y' = x^5"
         )
     )
 
@@ -40,59 +43,65 @@ object CLI {
         val diffEquation = askEquation()
         val (x0, y0) = askInitialConditions()
         val (xo, xn) = askInterval()
-        val h = askH(xn - x0)
-        val n = floor((xn - x0) / h).toInt() + 1
+        val h = askH(xn - xo)
+        val n = floor((xn - xo) / h).toInt() + 1
         val e = askE()
         askOutputOption()
         val c = diffEquation.c(x0, y0)
-        val milnaMethod = MilnaMethod.solve(diffEquation.f, x0, y0, h, n, e)
-        val eulerMethod = EulerMethod.solve(diffEquation.f, x0, y0, h, n, e)
-        val rungeKuttaMethod = RungeKuttaMethod.solve(diffEquation.f, x0, y0, h, n, e)
+        val eulerMethod = EulerMethod.solve(diffEquation.f, xo, xn, y0, h, n, e)
+        val rungeKuttaMethod = RungeKuttaMethod.solve(diffEquation.f, xo, xn, y0, eulerMethod.h!!, n, e)
+        val milnaMethod = MilnaMethod.solve(diffEquation.f, xo, xn, y0, eulerMethod.h, n, e)
         printResult(diffEquation.answerF, eulerMethod, rungeKuttaMethod, milnaMethod, c)
         bw.close()
     }
 
+
     private fun printResult(
         answer: (x: Double, C: Double) -> Double,
-        euler: Pair<ArrayList<Double>, ArrayList<Double>>,
-        rungeKutta: Pair<ArrayList<Double>, ArrayList<Double>>,
-        milna: Pair<ArrayList<Double>, ArrayList<Double>>,
+        euler: Result,
+        rungeKutta: Result,
+        milna: Result,
         c: Double
     ) {
-        val realAnswer = ArrayList(euler.first.map { answer(it, c) })
+        val realAnswer = ArrayList(euler.x.map { answer(it, c) })
         printTable(euler, "Метод Эйлера")
         printTable(rungeKutta, "Метод Рунге-Кутта")
         printTable(milna, "Метод Милна")
-        printTable(euler.first to realAnswer, "Правильный ответ")
-        drawPlot(euler.first, realAnswer, euler.second, rungeKutta.second, milna.second)
+        printTable(Result(euler.x, realAnswer, null), "Правильный ответ")
+        drawPlot(Result(euler.x, realAnswer, null) , euler, rungeKutta, milna)
 
     }
 
 
     private fun drawPlot(
-        xd: ArrayList<Double>, real: ArrayList<Double>, eulerY: ArrayList<Double>, rungeKuttaY: ArrayList<Double>, milnaY: ArrayList<Double>
+        real: Result,
+        euler: Result,
+        rungeKutta: Result,
+        milna: Result,
     ) {
         val data = mapOf(
-            xd to real, xd to eulerY, xd to rungeKuttaY, xd to milnaY
+            real.x to real.y, euler.x to euler.y, rungeKutta.x to rungeKutta.y, milna.x to milna.y,
         )
 
+        LetsPlot.theme = themeGrey()
         val plot = letsPlot(data) +
-                geomArea(fill = "white", color = "red") { x = xd; y = real } +
-                geomArea(fill = "white", color = "black") { x = xd; y = eulerY } +
-                geomArea(fill = "white", color = "blue") { x = xd; y = rungeKuttaY } +
-                geomArea(fill = "white", color = "yellow") { x = xd; y = milnaY }
+                geomLine(color = "red") { x = real.x; y = real.y } +
+                geomLine(color = "black") { x = euler.x; y = euler.y } +
+                geomLine(color = "blue") { x = rungeKutta.x; y = rungeKutta.y } +
+                geomLine(color = "yellow") { x = milna.x; y = milna.y}
+
 
         plot.show()
     }
 
-    private fun printTable(result: Pair<ArrayList<Double>, ArrayList<Double>>, nameOfMethod: String) {
+    private fun printTable(result: Result, nameOfMethod: String) {
         bw.write("-----------------------------------")
         bw.newLine()
         bw.write(nameOfMethod)
         bw.newLine()
         bw.write("xi    yi")
         bw.newLine()
-        result.first.zip(result.second).forEach {
+        result.x.zip(result.y).forEach {
             bw.write("${String.format("%.3f", it.first)} ${String.format("%.10f", it.second)}")
             bw.newLine()
         }

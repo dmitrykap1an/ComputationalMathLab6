@@ -2,20 +2,25 @@ package oneStepMethod.impl
 
 import oneStepMethod.OneStepMethod
 import kotlin.math.abs
+import utils.Result
 
 object EulerMethod : OneStepMethod {
     override fun solve(
         f: (x: Double, y: Double) -> Double,
         x0: Double,
+        xn: Double,
         y0: Double,
         h: Double,
         n: Int,
-        e: Double
-    ): Pair<ArrayList<Double>, ArrayList<Double>> {
-        val yh2 = euler(f, x0, y0, h, n)
-        val yh = euler(f, x0, y0, h/2, n)
-        for(i in 0 until yh.second.size){
-            if(abs(yh2.second[i] - yh.second[i])/15 > e) return solve(f, x0, y0, h/2, n, e)
+        e: Double,
+        cnt: Int
+    ): Result {
+        val yh2 = euler(f, x0, xn, y0, h, n)
+        val yh = euler(f, x0, xn, y0, h/2, n)
+
+        for(i in 0 until n){
+            if(cnt > 100) break
+            if(abs(yh2.y[i] - yh.y[i])/15 > e) return solve(f, x0, xn, y0, h/2, n, e, cnt + 1)
         }
         return yh2
     }
@@ -23,21 +28,22 @@ object EulerMethod : OneStepMethod {
     private fun euler(
         f: (x: Double, y: Double) -> Double,
         x0: Double,
+        xn: Double,
         y0: Double,
         h: Double,
         n: Int,
-    ): Pair<ArrayList<Double>, ArrayList<Double>> {
+    ): Result {
         val X = ArrayList<Double>()
         val Y = ArrayList<Double>()
         var y = y0
         var x = x0
-        for (i in 1..n) {
+        while(x <= xn + h) {
             X.add(x)
             Y.add(y)
             y += h * f(x, y)
             x += h
         }
-        return X to Y
+        return Result(X, Y, h)
     }
 
 
